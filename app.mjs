@@ -3,8 +3,7 @@ import path from "path";
 import { logger, morganMiddleware } from "./logging.mjs";
 import { fileURLToPath } from "url";
 import createBareServer from "@tomphttp/bare-server-node";
-import allowedDomains from "./validation/allowedDomains.json" assert { type: "json" };
-import allowedPrefixes from "./validation/allowedPrefixes.json" assert { type: "json" };
+import { allowedDomains, allowedPrefixes, blockedSources } from "./filters.mjs";
 import crypto from "crypto";
 import { createClient } from "redis";
 import fs from "fs";
@@ -85,7 +84,7 @@ app.get("/v1/mirror/:url", async (req, res) => {
   if (!data) {
     return res.status(404).json({
       id: "error.404",
-      message: "The page does not exist.",
+      message: "The resource does not exist.",
     });
   }
 
@@ -94,21 +93,14 @@ app.get("/v1/mirror/:url", async (req, res) => {
 
 app.get("*", async (req, res) => {
   if (bareServer.shouldRoute(req)) {
-    if (!allowedDomains.includes(req.headers["x-bare-host"])) {
-      return res.status(403).json({
-        id: "error.Blocked",
-        message: "This domain is not allowed to use the proxy.",
+    if (blockedSources.includes(req.headers["x-bare-host"])) {
+      res.writeHead(400, {
+        "Content-Type": "text/plain",
       });
+      return res.end("The request contains invalid source.");
     }
 
     return bareServer.routeRequest(req, res);
-  }
-
-  if (req.url.startsWith("/ultraviolet/") || req.url.trim() === "/") {
-    return res.status(400).json({
-      id: "error.invalidPath",
-      message: "The request contains invalid path.",
-    });
   }
 
   res.writeHead(200, { "content-type": "text/html" });

@@ -35597,6 +35597,17 @@ function attributes(ctx, meta = ctx.meta) {
             attr.value = ctx.rewriteUrl(attr.value, meta);
         };
 
+        if (type === 'rewrite' && (isHref(attr.name) && !isLink(attr.node.tagName))) {
+            attr.node.setAttribute(origPrefix + attr.name, attr.value);
+            attr.value = ctx.rewriteUrl(attr.value, meta);
+        };
+
+        if (type === 'rewrite' && (isHref(attr.name) && isLink(attr.node.tagName))) {
+            attr.node.setAttribute(origPrefix + attr.name, attr.value);
+            attr.value = "javascript:void(0)";
+            attr.node.setAttribute("target", "_self");
+        };
+
         if (type === 'rewrite' && isSrcset(attr.name)) {
             attr.node.setAttribute(origPrefix + attr.name, attr.value);
             attr.value = html.wrapSrcset(attr.value, meta);
@@ -35667,8 +35678,17 @@ function text(ctx, meta = ctx.meta) {
 };
 
 function isUrl(name, tag) {
-    return tag === 'object' && name === 'data' || ['src', 'href', 'ping', 'movie', 'action', 'poster', 'profile', 'background'].indexOf(name) > -1;
+    return tag === 'object' && name === 'data' || ['src', 'ping', 'movie', 'action', 'poster', 'profile', 'background'].indexOf(name) > -1;
 };
+
+function isHref(name) {
+    return name === 'href';
+};
+
+function isLink(tag) {
+    return tag === 'a';
+}
+
 function isEvent(name) {
     return [
         'onafterprint',
