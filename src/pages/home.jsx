@@ -9,7 +9,7 @@ function Home() {
   var navigate = useNavigate();
   
   useEffect(() => {
-    fetch("/v1/data/" + encodeURIComponent(window.location))
+    fetch("/v1/mirror/" + encodeURIComponent(window.location))
       .then((response) => response.json())
       .then((data) => {
         if (!data || !data.payload) {

@@ -3,7 +3,8 @@ import path from "path";
 import { logger, morganMiddleware } from "./logging.mjs";
 import { fileURLToPath } from "url";
 import createBareServer from "@tomphttp/bare-server-node";
-import block from "./blocklist/block.json" assert { type: "json" };
+import allowedDomains from "./validation/allowedDomains.json" assert { type: "json" };
+import allowedPrefixes from "./validation/allowedPrefixes.json" assert { type: "json" };
 import crypto from "crypto";
 import { createClient } from "redis";
 import fs from "fs";
@@ -30,8 +31,23 @@ redisClient.on("error", (err) => console.log("Redis Client Error", err));
 await redisClient.connect();
 
 app.post("/v1/proxy", (req, res) => {
-  const proxyHost = req.headers["x-forwarded-host"];
-  const host = proxyHost ? proxyHost : req.headers.host;
+  const originalUrl = new URL(req.body.url);
+  if (!allowedDomains.includes(originalUrl.host)) {
+    return res.status(403).json({
+      id: "error.Blocked",
+      message: "This domain is not allowed to use the proxy.",
+    });
+  }
+
+  if (!allowedPrefixes.includes(req.body.prefix)) {
+    return res.status(403).json({
+      id: "error.Blocked",
+      message: "This prefix is not in the list of allowed prefixes.",
+    });
+  }
+
+  let host = req.headers["x-forwarded-host"];
+  host = host ? host : req.headers.host;
   const protocol = req.headers["x-forwarded-proto"] || req.protocol;
 
   const data = {
@@ -39,12 +55,12 @@ app.post("/v1/proxy", (req, res) => {
     payload: req.body,
   };
 
-  const proxyUrl = new URL(req.body.url);
+  const proxyUrl = originalUrl
   proxyUrl.host = [data.payload.prefix, host].join(".");
   proxyUrl.protocol = protocol;
 
   redisClient.set(
-    "path:" + encodeURIComponent(proxyUrl),
+    "url:" + encodeURIComponent(proxyUrl),
     JSON.stringify(data),
     "EX",
     60 * 60 * 24 * 7
@@ -53,9 +69,17 @@ app.post("/v1/proxy", (req, res) => {
   return res.json({ id: data.id, mirror: proxyUrl });
 });
 
-app.get("/v1/data/:path", async (req, res) => {
+app.get("/v1/mirror/:url", async (req, res) => {
+  const originalUrl = new URL(req.params.url);
+  if (!allowedPrefixes.includes(originalUrl.host.split(".")[0])) {
+    return res.status(403).json({
+      id: "error.Blocked",
+      message: "This prefix is not in the list of allowed prefixes.",
+    });
+  }
+
   const data = await redisClient.get(
-    "path:" + encodeURIComponent(req.params.path)
+    "url:" + encodeURIComponent(req.params.url)
   );
 
   if (!data) {
@@ -70,10 +94,10 @@ app.get("/v1/data/:path", async (req, res) => {
 
 app.get("*", async (req, res) => {
   if (bareServer.shouldRoute(req)) {
-    if (block.includes(req.headers["x-bare-host"])) {
+    if (!allowedDomains.includes(req.headers["x-bare-host"])) {
       return res.status(403).json({
         id: "error.Blocked",
-        message: "Header was blocked by the owner of this site.",
+        message: "This domain is not allowed to use the proxy.",
       });
     }
 
