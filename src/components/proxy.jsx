@@ -1,6 +1,5 @@
 import { useLocalWindow } from "../settings.jsx";
 import React from "react";
-import { getLink } from "../util.jsx";
 
 var Proxy = React.forwardRef(({ overrideWindow }, ref) => {
   var web = React.createRef();

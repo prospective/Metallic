@@ -3,12 +3,21 @@ import { Routes, Route } from "react-router-dom";
 import "../style/index.css";
 import "../proxy.jsx";
 
+var Error = React.lazy(() => import("./error.jsx"));
 var Home = React.lazy(() => import("./home.jsx"));
 
 function App() {
   return (
     <>
       <Routes>
+        <Route
+          path="/404.html"
+          element={
+            <Suspense fallback={<></>}>
+              <Error />
+            </Suspense>
+          }
+        />
         <Route
           path="*"
           element={
