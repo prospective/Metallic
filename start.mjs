@@ -4,19 +4,26 @@ import vhost from "vhost";
 import http from "http";
 import https from "https";
 import app from "./app.mjs";
-
-const privateKey  = fs.readFileSync("sslcert/lead-jobs.pjas.ch+1-key.pem");
-const certificate = fs.readFileSync("sslcert/lead-jobs.pjas.ch+1.pem");
+import dotenv from "dotenv";
 
 const server = express();
+dotenv.config();
 
-server.use(vhost("lead-jobs.pjas.ch", app));
-server.use(vhost("*.lead-jobs.pjas.ch", app));
+const domain = process.env.DOMAIN || "localhost";
+
+server.use(vhost(domain, app));
+server.use(vhost(`*.${domain}`, app));
 
 server.use(express.json());
 
 const httpServer = http.createServer(server);
-const httpsServer = https.createServer({key: privateKey, cert: certificate}, server);
+const httpsServer = https.createServer(
+  {
+    key: fs.readFileSync(process.env.SSL_KEY ||  "/etc/ssl/certs/key.pem"),
+    cert: fs.readFileSync(process.env.SSL_CERT || "/etc/ssl/certs/cert.pem"),
+  },
+  server
+);
 
 httpServer.listen(8080);
 httpsServer.listen(4433);

@@ -43,6 +43,20 @@ body * {
   align-items: flex-end;
 }
 
+.web {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: none;
+  z-index: 10;
+  background: var(--background);
+  width: 100%;
+  height: calc(100% - 60px);
+  user-select: none;
+}
+
 .lds-dual-ring {
   display: inline-block;
   width: 80px;
