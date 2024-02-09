@@ -1,7 +1,34 @@
-version: '3'
+version: "3"
 services:
-      web:
-              image: metallic
-              build: .
-              ports:
-                      - "8088:8080" # Set first port to whatever you want, linking it with your discord
+  web:
+    image: metallic
+    build: .
+    ports:
+      - "8080:8080" # serve port
+      - "9229:9229" # debug port
+    networks:
+      - jpps
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - redis
+    volumes:
+      - '.:/app'
+  redis:
+    image: redis:6.2.6
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - jpps-redis:/data
+    networks:
+      - jpps
+
+networks:
+  jpps:
+    external: false
+    name: jpps
+
+volumes:
+  jpps-redis:
+    driver: "local"
