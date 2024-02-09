@@ -13,7 +13,6 @@ function Home() {
       .then((response) => response.json())
       .then((data) => {
         if (!data || !data.payload) {
-          debugger;
           navigate("/404.html");
         }
         setTimeout(() => {
