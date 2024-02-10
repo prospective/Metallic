@@ -3,7 +3,7 @@ import path from "path";
 import { logger, morganMiddleware } from "./logging.mjs";
 import { fileURLToPath } from "url";
 import createBareServer from "@tomphttp/bare-server-node";
-import { allowedDomains, allowedPrefixes, blockedSources } from "./filters.mjs";
+import { allowedDomains, allowedPrefixes, blockedSources as serverBlockedSources } from "./filters.mjs";
 import crypto from "crypto";
 import { createClient } from "redis";
 import fs from "fs";
@@ -69,8 +69,8 @@ app.post("/v1/proxy", (req, res) => {
 });
 
 app.get("/v1/mirror/:url", async (req, res) => {
-  const originalUrl = new URL(req.params.url);
-  if (!allowedPrefixes.includes(originalUrl.host.split(".")[0])) {
+  const proxyUrl = new URL(req.params.url);
+  if (!allowedPrefixes.includes(proxyUrl.host.split(".")[0])) {
     return res.status(403).json({
       id: "error.Blocked",
       message: "This prefix is not in the list of allowed prefixes.",
@@ -78,7 +78,7 @@ app.get("/v1/mirror/:url", async (req, res) => {
   }
 
   const data = await redisClient.get(
-    "url:" + encodeURIComponent(req.params.url)
+    "url:" + encodeURIComponent(proxyUrl)
   );
 
   if (!data) {
@@ -93,11 +93,24 @@ app.get("/v1/mirror/:url", async (req, res) => {
 
 app.get("*", async (req, res) => {
   if (bareServer.shouldRoute(req)) {
-    if (blockedSources.includes(req.headers["x-bare-host"])) {
+    if (serverBlockedSources.includes(req.headers["x-bare-host"])) {
       res.writeHead(400, {
         "Content-Type": "text/plain",
       });
       return res.end("The request contains invalid source.");
+    }
+
+    const data = await redisClient.get(
+      "url:" + encodeURIComponent(req.headers["x-bare-url"])
+    );
+    if (data) {
+      const clientBlockedSources = JSON.parse(data).payload.blocked_sources || [];
+      if (clientBlockedSources.includes(req.headers["x-bare-host"])) {
+        res.writeHead(400, {
+          "Content-Type": "text/plain",
+        });
+        return res.end("The request contains invalid source.");
+      }
     }
 
     return bareServer.routeRequest(req, res);

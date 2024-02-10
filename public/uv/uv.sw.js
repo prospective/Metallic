@@ -45,11 +45,22 @@ class UVServiceWorker extends EventEmitter {
         };  
         this.config = config;
         this.browser = Ultraviolet.Bowser.getParser(self.navigator.userAgent).getBrowserName();
+        this.pageUrl = self.location.href;
 
         if (this.browser === 'Firefox') {
             this.headers.forward.push('user-agent');
             this.headers.forward.push('content-type');
         };
+
+        self.clients.matchAll({includeUncontrolled: true}).then(clients => {
+            for (const client of clients) {
+                if (client.url.startsWith(this.address.origin)) {
+                    if (!client.url.includes(this.config.prefix || '/service/')) {
+                        this.pageUrl = client.url
+                    }
+                }
+            }
+        });
     };
     async fetch({ request }) {
         if (!request.url.startsWith(location.origin + (this.config.prefix || '/service/'))) {
@@ -257,6 +268,7 @@ class RequestContext {
         this.credentials = 'omit';
         this.mode = request.mode === 'cors' ? request.mode : 'same-origin';
         this.blob = false;
+        this.pageUrl = worker.pageUrl;
     };
     get send() {
         return new Request((!this.blob ? this.address.href + 'v1/' : 'blob:' + location.origin + this.url.pathname), {
@@ -268,6 +280,7 @@ class RequestContext {
                 'x-bare-port': this.url.port || (this.url.protocol === 'https:' ? '443' : '80'),
                 'x-bare-headers': JSON.stringify(this.headers),
                 'x-bare-forward-headers': JSON.stringify(this.forward),
+                'x-bare-url' : this.pageUrl,
             },
             redirect: this.redirect,
             credentials: this.credentials,
