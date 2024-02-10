@@ -20,6 +20,9 @@ function Home() {
           config.url = getLink(config.url);
           proxy.current.open(config);
         }, 1000);
+      })
+      .catch((error) => {
+        navigate("/404.html");
       });
   }, []);
 

@@ -14,16 +14,22 @@ const domain = process.env.DOMAIN || "localhost";
 server.use(vhost(domain, app));
 server.use(vhost(`*.${domain}`, app));
 
-server.use(express.json());
-
 const httpServer = http.createServer(server);
-const httpsServer = https.createServer(
-  {
-    key: fs.readFileSync(process.env.SSL_KEY ||  "/etc/ssl/certs/key.pem"),
-    cert: fs.readFileSync(process.env.SSL_CERT || "/etc/ssl/certs/cert.pem"),
-  },
-  server
-);
-
 httpServer.listen(8080);
-httpsServer.listen(4433);
+
+if (process.env.USE_HTTPS === "true") {
+  if (!process.env.SSL_KEY || !process.env.SSL_CERT) {
+    throw new Error("SSL_KEY and SSL_CERT must be set when USE_HTTPS is true.");
+  }
+
+  const httpsServer = https.createServer(
+    {
+      key: fs.readFileSync(process.env.SSL_KEY),
+      cert: fs.readFileSync(process.env.SSL_CERT),
+    },
+    server
+  );
+  
+  
+  httpsServer.listen(4433);
+}

@@ -12,9 +12,10 @@ services:
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      DOMAIN: "lead-jobs.pjas.ch"
-      SSL_KEY: "/app/certs/key.pem"
-      SSL_CERT: "/app/certs/cert.pem"
+      DOMAIN: "localhost"
+      USE_HTTPS: "false"
+      SSL_KEY: "./certs/key.pem"
+      SSL_CERT: "./certs/cert.pem"
     depends_on:
       - redis
     volumes:
