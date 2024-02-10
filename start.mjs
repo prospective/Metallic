@@ -15,7 +15,7 @@ server.use(vhost(domain, app));
 server.use(vhost(`*.${domain}`, app));
 
 const httpServer = http.createServer(server);
-httpServer.listen(8080);
+httpServer.listen(process.env.HTTP_PORT || 80);
 
 if (process.env.USE_HTTPS === "true") {
   if (!process.env.SSL_KEY || !process.env.SSL_CERT) {
@@ -24,12 +24,11 @@ if (process.env.USE_HTTPS === "true") {
 
   const httpsServer = https.createServer(
     {
-      key: fs.readFileSync(process.env.SSL_KEY),
-      cert: fs.readFileSync(process.env.SSL_CERT),
+      key: fs.readFileSync(process.env.SSL_KEY || "/etc/ssl/certs/key.pem"),
+      cert: fs.readFileSync(process.env.SSL_CERT || "/etc/ssl/certs/cert.pem"),
     },
     server
   );
   
-  
-  httpsServer.listen(4433);
+  httpsServer.listen(process.env.HTTPS_PORT || 443);
 }
