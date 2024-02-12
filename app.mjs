@@ -91,7 +91,7 @@ app.get("/v1/mirror/:url", async (req, res) => {
   return res.json(JSON.parse(data));
 });
 
-app.get("*", async (req, res) => {
+app.all("*", async (req, res) => {
   if (bareServer.shouldRoute(req)) {
     if (serverBlockedSources.includes(req.headers["x-bare-host"])) {
       res.writeHead(400, {

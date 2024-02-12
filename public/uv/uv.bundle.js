@@ -35604,8 +35604,10 @@ function attributes(ctx, meta = ctx.meta) {
 
         if (type === 'rewrite' && (isHref(attr.name) && isLink(attr.node.tagName))) {
             attr.node.setAttribute(origPrefix + attr.name, attr.value);
-            attr.value = "javascript:void(0)";
-            attr.node.setAttribute("target", "_self");
+            if (attr.node.getAttribute('target') !== '_blank') {
+                attr.node.setAttribute("target", "_top");
+                attr.value = relToAbs(meta.url, attr.value);
+            }
         };
 
         if (type === 'rewrite' && isSrcset(attr.name)) {
@@ -35660,6 +35662,34 @@ function attributes(ctx, meta = ctx.meta) {
     });  
 
 };
+
+function relToAbs(currentLocation, url){
+    /* Only accept commonly trusted protocols:
+     * Only data-image URLs are accepted, Exotic flavours (escaped slash,
+     * html-entitied characters) are not supported to keep the function fast */
+    if(/^(https?|file|ftps?|mailto|javascript|data:image\/[^;]{2,9};):/i.test(url))
+         return url; //Url is already absolute
+
+    var base_url = currentLocation.href.match(/^(.+)\/?(?:#.+)?$/)[0]+"/";
+    if(url.substring(0,2) == "//")
+        return currentLocation.protocol + url;
+    else if(url.charAt(0) == "/")
+        return currentLocation.protocol + "//" + currentLocation.host + url;
+    else if(url.substring(0,2) == "./")
+        url = "." + url;
+    else if(/^\s*$/.test(url))
+        return ""; //Empty = Return nothing
+    else url = "../" + url;
+
+    url = base_url + url;
+    var i=0
+    while(/\/\.\.\//.test(url = url.replace(/[^\/]+\/+\.\.\//g,"")));
+
+    /* Escape certain characters to prevent XSS */
+    url = url.replace(/\.$/,"").replace(/\/\./g,"").replace(/"/g,"%22")
+            .replace(/'/g,"%27").replace(/</g,"%3C").replace(/>/g,"%3E");
+    return url;
+}
 
 
 function text(ctx, meta = ctx.meta) {
