@@ -59,8 +59,7 @@ var Proxy = React.forwardRef(({ overrideWindow }, ref) => {
                 break;
             }
           }
-
-          debugger;
+          
           setShowSpinner(false);
         }}
         ref={web}
