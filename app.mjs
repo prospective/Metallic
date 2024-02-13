@@ -49,23 +49,30 @@ app.post("/v1/proxy", (req, res) => {
   host = host ? host : req.headers.host;
   const protocol = req.headers["x-forwarded-proto"] || req.protocol;
 
+  const proxyUrl = originalUrl
+  proxyUrl.host = [req.body.prefix, host].join(".");
+  proxyUrl.protocol = protocol;
+
   const data = {
     id: crypto.randomBytes(16).toString("hex"),
     payload: req.body,
+    mirror: proxyUrl.toString(),
   };
+  const serializedData = JSON.stringify(data)
 
-  const proxyUrl = originalUrl
-  proxyUrl.host = [data.payload.prefix, host].join(".");
-  proxyUrl.protocol = protocol;
+  const encodedUrl = encodeURIComponent(proxyUrl);
+
+  redisClient.zAdd(encodedUrl, {
+    score: Date.now(),
+    value: serializedData,
+  });
 
   redisClient.set(
-    "url:" + encodeURIComponent(proxyUrl),
-    JSON.stringify(data),
-    "EX",
-    60 * 60 * 24 * 7
+    "id:" + data.id,
+    serializedData,
   );
 
-  return res.json({ id: data.id, mirror: proxyUrl });
+  return res.json({ id: data.id, mirror: data.mirror });
 });
 
 app.get("/v1/mirror/:url", async (req, res) => {
@@ -77,8 +84,45 @@ app.get("/v1/mirror/:url", async (req, res) => {
     });
   }
 
+  const data = await redisClient.zRange(
+    encodeURIComponent(proxyUrl),
+    -1,
+    -1,
+  );
+
+  if (!data) {
+    return res.status(404).json({
+      id: "error.404",
+      message: "The resource does not exist.",
+    });
+  }
+
+  return res.json(JSON.parse(data));
+});
+
+app.get("/v1/history/:url", async (req, res) => {
+  const data = await redisClient.zRangeWithScores(encodeURIComponent(req.params.url), 0, -1);
+
+  if (!data) {
+    return res.status(404).json({
+      id: "error.404",
+      message: "The resource does not exist.",
+    });
+  }
+
+  const result = data.map((item) => {
+    return {
+      id: JSON.parse(item.value).id,
+      timestamp: item.score,
+    };
+  });
+
+  return res.json(result);
+});
+
+app.get("/v1/data/:id", async (req, res) => {
   const data = await redisClient.get(
-    "url:" + encodeURIComponent(proxyUrl)
+    "id:" + req.params.id,
   );
 
   if (!data) {
@@ -100,8 +144,10 @@ app.all("*", async (req, res) => {
       return res.end("The request contains invalid source.");
     }
 
-    const data = await redisClient.get(
-      "url:" + encodeURIComponent(req.headers["x-bare-url"])
+    const data = await redisClient.zRange(
+      encodeURIComponent(req.headers["x-bare-url"]),
+      -1,
+      -1,
     );
     if (data) {
       const clientBlockedSources = JSON.parse(data).payload.blocked_sources || [];
