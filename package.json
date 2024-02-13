@@ -50,7 +50,8 @@
     "dev": "vite",
     "build": "vite build",
     "build-watch": "vite build --watch",
-    "start": "./node_modules/.bin/nodemon start.mjs",
+    "start": "node start.mjs",
+    "start-watch": "./node_modules/.bin/nodemon start.mjs",
     "start-debug": "./node_modules/.bin/nodemon --inspect=0.0.0.0:9229 start.mjs"
   },
   "eslintConfig": {
