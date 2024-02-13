@@ -5,11 +5,13 @@ var Proxy = React.forwardRef(({ overrideWindow }, ref) => {
   var web = React.createRef();
   var [config, setConfig] = React.useState();
   var [localWindow] = useLocalWindow();
+  const [showSpinner, setShowSpinner] = React.useState(false);
 
   React.useImperativeHandle(
     ref,
     () => ({
       open: (config) => {
+        setShowSpinner(true);
         switch (overrideWindow || localWindow) {
           case "simple":
             window.location.href = config.url;
@@ -57,6 +59,9 @@ var Proxy = React.forwardRef(({ overrideWindow }, ref) => {
                 break;
             }
           }
+
+          debugger;
+          setShowSpinner(false);
         }}
         ref={web}
         className="web"
@@ -64,6 +69,7 @@ var Proxy = React.forwardRef(({ overrideWindow }, ref) => {
         title="Website"
         id="web"
       ></iframe>
+      <div class="lds-dual-ring" style={{display: showSpinner ? 'inline-block' : 'none' }} ></div>
     </>
   );
 });

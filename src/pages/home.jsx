@@ -7,7 +7,6 @@ function Home() {
   var proxy = React.useRef();
   var useEffect = React.useEffect;
   var navigate = useNavigate();
-  const [showSpinner, setShowSpinner] = React.useState(true)
   
   useEffect(() => {
     fetch("/v1/mirror/" + encodeURIComponent(window.location))
@@ -24,16 +23,12 @@ function Home() {
       })
       .catch((error) => {
         navigate("/404.html");
-      })
-      .finally(() => {
-        setShowSpinner(false);
       });
   }, []);
 
   return (
     <>
       <Proxy ref={proxy} />
-      <div class="lds-dual-ring" style={{display: showSpinner ? 'inline-block' : 'none' }} ></div>
     </>
   );
 }
