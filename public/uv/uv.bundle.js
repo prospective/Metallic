@@ -74,7 +74,23 @@ class HTML extends _events_js__WEBPACK_IMPORTED_MODULE_0__["default"] {
     wrapSrcset(str, meta = this.ctx.meta) {
         return str.split(',').map(src => {
             const parts = src.trimStart().split(' ');
-            if (parts[0]) parts[0] = this.ctx.rewriteUrl(parts[0], meta);
+            if (parts[0]) {
+                let shouldRewrite = true;
+                if (URL.canParse(parts[0])) {
+                    const url = new URL(parts[0]);
+                    if (url.hostname !== meta.url.hostname) {
+                        if (this.ctx.payload && this.ctx.payload.whitelist) {
+                            if (!this.ctx.payload.whitelist.includes(url.hostname)) {
+                                shouldRewrite = false;
+                            }
+                        }
+                    }
+                }
+
+                if (shouldRewrite) {
+                    parts[0] = this.ctx.rewriteUrl(parts[0], meta);
+                } 
+            };
             return parts.join(' ');
         }).join(', ');
     };
@@ -35612,8 +35628,22 @@ function attributes(ctx, meta = ctx.meta) {
         };
 
         if (type === 'rewrite' && (isHref(attr.name) && !isLink(attr.node.tagName))) {
-            attr.node.setAttribute(origPrefix + attr.name, attr.value);
-            attr.value = ctx.rewriteUrl(attr.value, meta);
+            let shouldRewrite = true;
+            if (URL.canParse(attr.value)) {
+                const url = new URL(attr.value);
+                if (url.hostname !== meta.url.hostname) {
+                    if (ctx.payload && ctx.payload.whitelist) {
+                        if (!ctx.payload.whitelist.includes(url.hostname)) {
+                            shouldRewrite = false;
+                        }
+                    }
+                }
+            }
+
+            if (shouldRewrite) {
+                attr.node.setAttribute(origPrefix + attr.name, attr.value);
+                attr.value = ctx.rewriteUrl(attr.value, meta);
+            }
         };
 
         if (type === 'rewrite' && (isHref(attr.name) && isLink(attr.node.tagName))) {
@@ -39262,6 +39292,9 @@ class Ultraviolet {
         } catch(e) {
             return meta.origin + this.prefix + this.encodeUrl(str);
         };
+    };
+    isRelativeUrl(url) {
+
     };
     sourceUrl(str, meta = this.meta) {
         if (!str || this.urlRegex.test(str)) return str;
