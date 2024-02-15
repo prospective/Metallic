@@ -12,7 +12,11 @@ async function __uvHook(window, config = {}, bare = '/bare/') {
     const worker = !window.window;
     const master = '__uv';
     const methodPrefix = '__uv$';
-    const __uv = new Ultraviolet({
+
+    config.payload = window.__uv$payload || {};
+
+    const __uv = new Ultraviolet();
+    await __uv.init({
         ...config,
         window,
     });
@@ -415,7 +419,7 @@ async function __uvHook(window, config = {}, bare = '/bare/') {
 
         if (__uv.attrs.isHtml(event.data.name)) {
             event.target.call(event.that, __uv.attributePrefix + '-attr-' + event.data.name, event.data.value);
-            event.data.value = __uv.rewriteHtml(event.data.value, {...__uv.meta, document: true, injectHead:__uv.createHtmlInject(__uv.handlerScript, __uv.bundleScript, __uv.configScript, __uv.cookieStr, window.location.href) });
+            event.data.value = __uv.rewriteHtml(event.data.value, {...__uv.meta, document: true, injectHead:__uv.createHtmlInject(__uv.handlerScript, __uv.bundleScript, __uv.configScript, __uv.cookieStr, window.location.href, __uv.payload) });
         };
 
         if (__uv.attrs.isSrcset(event.data.name)) {
@@ -534,7 +538,7 @@ async function __uvHook(window, config = {}, bare = '/bare/') {
         set: (target, that, [val]) => {
             target.call(that, __uv.rewriteHtml(val, {
                 document: true,
-                injectHead: __uv.createHtmlInject(__uv.handlerScript, __uv.bundleScript, __uv.configScript, __uv.cookieStr, window.location.href)
+                injectHead: __uv.createHtmlInject(__uv.handlerScript, __uv.bundleScript, __uv.configScript, __uv.cookieStr, window.location.href, __uv.payload)
             }))
         },
     });
@@ -603,7 +607,7 @@ async function __uvHook(window, config = {}, bare = '/bare/') {
 
         if (__uv.attrs.isHtml(event.data.name)) {
             client.element.setAttribute.call(event.that.ownerElement, __uv.attributePrefix + '-attr-' + event.data.name, event.data.value);
-            event.data.value = __uv.rewriteHtml(event.data.value, {...__uv.meta, document: true, injectHead:__uv.createHtmlInject(__uv.handlerScript, __uv.bundleScript, __uv.configScript, __uv.cookieStr, window.location.href) });
+            event.data.value = __uv.rewriteHtml(event.data.value, {...__uv.meta, document: true, injectHead:__uv.createHtmlInject(__uv.handlerScript, __uv.bundleScript, __uv.configScript, __uv.cookieStr, window.location.href, __uv.payload) });
         };
 
         if (__uv.attrs.isSrcset(event.data.name)) {

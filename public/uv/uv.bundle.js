@@ -35593,8 +35593,22 @@ function attributes(ctx, meta = ctx.meta) {
         };
         
         if (type === 'rewrite' && isUrl(attr.name, attr.tagName)) {
-            attr.node.setAttribute(origPrefix + attr.name, attr.value);
-            attr.value = ctx.rewriteUrl(attr.value, meta);
+            let shouldRewrite = true;
+            if (URL.canParse(attr.value)) {
+                const url = new URL(attr.value);
+                if (url.hostname !== meta.url.hostname) {
+                    if (ctx.payload && ctx.payload.whitelist) {
+                        if (!ctx.payload.whitelist.includes(url.hostname)) {
+                            shouldRewrite = false;
+                        }
+                    }
+                }
+            }
+
+            if (shouldRewrite) {
+                attr.node.setAttribute(origPrefix + attr.name, attr.value);
+                attr.value = ctx.rewriteUrl(attr.value, meta);
+            }
         };
 
         if (type === 'rewrite' && (isHref(attr.name) && !isLink(attr.node.tagName))) {
@@ -35603,7 +35617,6 @@ function attributes(ctx, meta = ctx.meta) {
         };
 
         if (type === 'rewrite' && (isHref(attr.name) && isLink(attr.node.tagName))) {
-            attr.node.setAttribute(origPrefix + attr.name, attr.value);
             if (attr.node.getAttribute('target') !== '_blank') {
                 attr.node.setAttribute("target", "_top");
                 attr.value = relToAbs(meta.url, attr.value);
@@ -35807,7 +35820,7 @@ function injectHead(ctx) {
     });
 };
 
-function createInjection(handler = '/uv.handler.js', bundle = '/uv.bundle.js', config = '/uv.config.js', cookies = '', referrer = '') {
+function createInjection(handler = '/uv.handler.js', bundle = '/uv.bundle.js', config = '/uv.config.js', cookies = '', referrer = '', payload = {}) {
     return [
         {
             tagName: 'script',
@@ -35815,7 +35828,7 @@ function createInjection(handler = '/uv.handler.js', bundle = '/uv.bundle.js', c
             childNodes: [
                 {
                     nodeName: '#text',
-                    value: `window.__uv$cookies = atob("${btoa(cookies)}");\nwindow.__uv$referrer = atob("${btoa(referrer)}");`
+                    value: `window.__uv$cookies = atob("${btoa(cookies)}");\nwindow.__uv$referrer = atob("${btoa(referrer)}");\nwindow.__uv$payload = ${JSON.stringify(payload)};`
                 },
             ],
             attrs: [
@@ -35865,7 +35878,7 @@ function createInjection(handler = '/uv.handler.js', bundle = '/uv.bundle.js', c
                     skip: true,
                 }
             ],
-        }
+        },
     ];
 };
 
@@ -39189,7 +39202,8 @@ const valid_chars = "!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghij
 const reserved_chars = "%";
 
 class Ultraviolet {
-    constructor(options = {}) {
+    async init(options = {}) {
+        this.payload = options.payload || {};
         this.prefix = options.prefix || '/service/';
         this.urlRegex = /^(#|about:|data:|mailto:)/
         this.rewriteUrl = options.rewriteUrl || this.rewriteUrl;

@@ -17,6 +17,10 @@ function Home() {
         }
         setTimeout(() => {
           var config = data.payload;
+
+          const bc = new BroadcastChannel("sw-messages");
+          bc.postMessage(config);
+          
           config.url = getLink(config.url);
           proxy.current.open(config);
         }, 1000);

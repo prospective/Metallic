@@ -3,7 +3,7 @@ import path from "path";
 import { logger, morganMiddleware } from "./logging.mjs";
 import { fileURLToPath } from "url";
 import createBareServer from "@tomphttp/bare-server-node";
-import { allowedDomains, allowedPrefixes, blockedSources as serverBlockedSources } from "./filters.mjs";
+import { allowedDomains, allowedPrefixes, blacklistSources} from "./filters.mjs";
 import crypto from "crypto";
 import { createClient } from "redis";
 import fs from "fs";
@@ -137,26 +137,11 @@ app.get("/v1/data/:id", async (req, res) => {
 
 app.all("*", async (req, res) => {
   if (bareServer.shouldRoute(req)) {
-    if (serverBlockedSources.includes(req.headers["x-bare-host"])) {
+    if (blacklistSources.includes(req.headers["x-bare-host"])) {
       res.writeHead(400, {
         "Content-Type": "text/plain",
       });
       return res.end("The request contains invalid source.");
-    }
-
-    const data = await redisClient.zRange(
-      encodeURIComponent(req.headers["x-bare-url"]),
-      -1,
-      -1,
-    );
-    if (data) {
-      const clientBlockedSources = JSON.parse(data).payload.blocked_sources || [];
-      if (clientBlockedSources.includes(req.headers["x-bare-host"])) {
-        res.writeHead(400, {
-          "Content-Type": "text/plain",
-        });
-        return res.end("The request contains invalid source.");
-      }
     }
 
     return bareServer.routeRequest(req, res);

@@ -3,7 +3,6 @@ const allowedDomains = [
     "jobs.dualoo.com",
     "jobs.zgks.ch",
     "jobs.finnova.com",
-    "jobs.ruesterei.ch",
     "jobs.amag-group.ch",
     "www.gkb.ch"
 ];
@@ -13,12 +12,11 @@ const allowedPrefixes = [
     "dualoo",
     "zgks",
     "finnova",
-    "ruesterei",
     "amag-group",
     "gkb"
 ];
 
-const blockedSources = [
+const blacklistSources = [
 ];
 
-export { allowedDomains, allowedPrefixes, blockedSources };
+export { allowedDomains, allowedPrefixes, blacklistSources };

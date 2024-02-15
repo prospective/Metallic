@@ -1,9 +1,9 @@
 importScripts('/uv/uv.bundle.js');
 importScripts('/uv/uv.config.js');
 
-class UVServiceWorker extends EventEmitter {     
-    constructor(config = __uv$config) {
-        super();
+class UVServiceWorker extends EventEmitter {
+    init(callback, config = __uv$config) {
+      if (!config.payload) config.payload = null;
         if (!config.bare) config.bare = '/bare/';
         this.addresses = typeof config.bare === 'string' ? [ new URL(config.bare, location) ] : config.bare.map(str => new URL(str, location));
         this.headers = {
@@ -61,14 +61,19 @@ class UVServiceWorker extends EventEmitter {
                 }
             }
         });
+
+        callback.bind(this)();
+    };
+    setPayload(payload) {
+      this.config.payload = payload;
     };
     async fetch({ request }) {
         if (!request.url.startsWith(location.origin + (this.config.prefix || '/service/'))) {
             return fetch(request);
         };
         try {
-
-            const ultraviolet = new Ultraviolet(this.config);
+            const ultraviolet = new Ultraviolet();
+            await ultraviolet.init(this.config);
 
             if (typeof this.config.construct === 'function') {
                 this.config.construct(ultraviolet, 'service');
@@ -177,8 +182,9 @@ class UVServiceWorker extends EventEmitter {
                                         this.config.bundle, 
                                         this.config.config,
                                         ultraviolet.cookie.serialize(cookies, ultraviolet.meta, true), 
-                                        request.referrer
-                                    )
+                                        request.referrer,
+                                        this.config.payload
+                                    ),
                                 }
                             );      
                         };
